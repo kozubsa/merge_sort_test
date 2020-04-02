@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"github.com/bxcodec/faker/v3"
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 )
 
@@ -22,156 +23,161 @@ type Character struct {
 	Place string
 }
 
-func TestUnique(t *testing.T) {
-	asrt := assert.New(t)
+type args struct {
+	Names  []Name
+	Places []Place
+}
 
-	type args struct {
-		Name  []Name
-		Place []Place
+type TestCase = struct {
+	args args
+	want []Character
+}
+
+func FillTestCase() TestCase {
+	names := make([]Name, 0, 100)
+	for i := 0; i < 100; i++ {
+		if i%3 == 0 {
+			continue
+		}
+		names = append(names, Name{
+			Id:   int32(i * 1111),
+			Name: faker.WORD,
+		})
 	}
-	tests := []struct {
-		name string
-		args args
-		want []Character
-	}{
-		{
-			name: "",
-			args: args{
-				Name: []Name{
-					{
-						Id:   1111,
-						Name: "Leoric",
-					},
-					{
-						Id:   2222,
-						Name: "Cain",
-					},
-					{
-						Id:   3333,
-						Name: "Azmodan",
-					},
-					{
-						Id:   4444,
-						Name: "Tyrael",
-					},
-					{
-						Id:   6666,
-						Name: "Ba`al",
-					},
-				},
-				Place: []Place{
-					{
-						Id:    1111,
-						Place: "Act 1",
-					},
-					{
-						Id:    2222,
-						Place: "Act 2",
-					},
-					{
-						Id:    3333,
-						Place: "Act 3",
-					},
-					{
-						Id:    5555,
-						Place: "Act 5",
-					},
-					{
-						Id:    7777,
-						Place: "Act 7",
-					},
-					{
-						Id:    8888,
-						Place: "Act 8",
-					},
-				},
-			},
-			want: []Character{
-				{
-					Id:    1111,
-					Name:  "Leoric",
-					Place: "Act 1",
-				},
-				{
-					Id:    2222,
-					Name:  "Cain",
-					Place: "Act 2",
-				},
-				{
-					Id:    3333,
-					Name:  "Azmodan",
-					Place: "Act 3",
-				},
-				{
-					Id:    4444,
-					Name:  "Tyrael",
-					Place: "",
-				},
-				{
-					Id:    5555,
-					Name:  "",
-					Place: "Act 5",
-				},
-				{
-					Id:    6666,
-					Name:  "Ba`al",
-					Place: "",
-				},
-				{
-					Id:    7777,
-					Name:  "",
-					Place: "Act 7",
-				},
-				{
-					Id:    8888,
-					Name:  "",
-					Place: "Act 8",
-				},
-			},
+	places := make([]Place, 0, 100)
+	for i := 0; i < 100; i++ {
+		if i%5 == 0 {
+			continue
+		}
+		places = append(places, Place{
+			Id:    int32(i * 1111),
+			Place: faker.Word(),
+		})
+	}
+	return TestCase{
+		args: args{
+			Names:  names,
+			Places: places,
 		},
-	}
-
-	for key, tt := range tests {
-		name := fmt.Sprintln(key, tt.name)
-
-		got := listSortedChars(tt.args.Name, tt.args.Place)
-
-		asrt.Equal(tt.want, got, name)
+		want: []Character{
+			{Id: 1111, Name: "Leoric", Place: "Act 1"},
+			{Id: 2222, Name: "Cain", Place: "Act 2"},
+			{Id: 3333, Name: "Azmodan", Place: "Act 3"},
+			{Id: 4444, Name: "Tyrael", Place: ""},
+			{Id: 5555, Name: "", Place: "Act 5"},
+			{Id: 6666, Name: "Ba`al", Place: ""},
+			{Id: 7777, Name: "", Place: "Act 7"},
+			{Id: 8888, Name: "", Place: "Act 8"},
+		},
 	}
 }
 
-func listSortedChars(name []Name, place []Place) []Character {
+func BenchmarkMergeSort(b *testing.B) {
+	// asrt := assert.New(b)
+	testCase := FillTestCase()
 	result := make([]Character, 0)
 
-	for i := 0; i < len(name); i++ {
-		char := Character{Id: name[i].Id, Name: name[i].Name}
+	for i := 0; i < len(testCase.args.Names); i++ {
+		char := Character{Id: testCase.args.Names[i].Id, Name: testCase.args.Names[i].Name}
 
-		for j := 0; j < len(place); j++ {
-			if place[j].Id == name[i].Id {
-				char.Place = place[j].Place
+		for j := 0; j < len(testCase.args.Places); j++ {
+			if testCase.args.Places[j].Id == testCase.args.Names[i].Id {
+				char.Place = testCase.args.Places[j].Place
 			}
 		}
 
 		result = append(result, char)
 	}
 
-
-	for i := 0; i < len(place); i++ {
+	for i := 0; i < len(testCase.args.Places); i++ {
 		var exist bool
 		for j := 0; j < len(result); j++ {
-			if result[j].Id == place[i].Id {
+			if result[j].Id == testCase.args.Places[i].Id {
 				exist = true
 				break
 			}
 		}
 		if !exist {
-			result = append(result, Character{Id: place[i].Id, Place: place[i].Place})
+			result = append(result, Character{Id: testCase.args.Places[i].Id, Place: testCase.args.Places[i].Place})
 		}
 	}
 
 	result = mergeSort(result)
+	// asrt.Equal(testCase.want, result)
+}
 
-	return result
+func TestMergeSort(t *testing.T) {
+	asrt := assert.New(t)
+	testCase := FillTestCase()
+	result := make([]Character, 0)
+
+	for i := 0; i < len(testCase.args.Names); i++ {
+		char := Character{Id: testCase.args.Names[i].Id, Name: testCase.args.Names[i].Name}
+
+		for j := 0; j < len(testCase.args.Places); j++ {
+			if testCase.args.Places[j].Id == testCase.args.Names[i].Id {
+				char.Place = testCase.args.Places[j].Place
+			}
+		}
+
+		result = append(result, char)
+	}
+
+	for i := 0; i < len(testCase.args.Places); i++ {
+		var exist bool
+		for j := 0; j < len(result); j++ {
+			if result[j].Id == testCase.args.Places[i].Id {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			result = append(result, Character{Id: testCase.args.Places[i].Id, Place: testCase.args.Places[i].Place})
+		}
+	}
+
+	resultMergeSort := mergeSort(result)
+
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Id < result[j].Id
+	})
+
+	asrt.Equal(resultMergeSort, result)
+}
+
+func BenchmarkSort(b *testing.B) {
+	// asrt := assert.New(b)
+	testCase := FillTestCase()
+	result := make([]Character, 0)
+
+	for i := 0; i < len(testCase.args.Names); i++ {
+		char := Character{Id: testCase.args.Names[i].Id, Name: testCase.args.Names[i].Name}
+
+		for j := 0; j < len(testCase.args.Places); j++ {
+			if testCase.args.Places[j].Id == testCase.args.Names[i].Id {
+				char.Place = testCase.args.Places[j].Place
+			}
+		}
+
+		result = append(result, char)
+	}
+
+	for i := 0; i < len(testCase.args.Places); i++ {
+		var exist bool
+		for j := 0; j < len(result); j++ {
+			if result[j].Id == testCase.args.Places[i].Id {
+				exist = true
+				break
+			}
+		}
+		if !exist {
+			result = append(result, Character{Id: testCase.args.Places[i].Id, Place: testCase.args.Places[i].Place})
+		}
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Id < result[j].Id
+	})
 }
 
 func mergeSort(items []Character) []Character {
@@ -183,7 +189,7 @@ func mergeSort(items []Character) []Character {
 
 	middle := num / 2
 	var (
-		left = make([]Character, middle)
+		left  = make([]Character, middle)
 		right = make([]Character, num-middle)
 	)
 	for i := 0; i < num; i++ {
@@ -198,7 +204,7 @@ func mergeSort(items []Character) []Character {
 }
 
 func merge(left, right []Character) (result []Character) {
-	result = make([]Character, len(left) + len(right))
+	result = make([]Character, len(left)+len(right))
 
 	i := 0
 	for len(left) > 0 && len(right) > 0 {
